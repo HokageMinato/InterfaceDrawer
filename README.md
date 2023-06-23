@@ -12,5 +12,8 @@ Limitations:
 
 ● Accessing interface requires accessing wrappers.
 
+● Setters are not enabled.
+
+
 Screenshot:
 ![Injecting Circle,Square and Triangle to reference of IShape](https://i.ibb.co/5K3HCCc/SS.png)
