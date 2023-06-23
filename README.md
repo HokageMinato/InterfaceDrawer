@@ -2,6 +2,7 @@
 Easily Inject interface instances from inspector with type validation and drag and drop functionality.
 
 Limitations:
+
 ● Collections are not supported, yet.
   However you can make collections of InterfaceHolder 
   For eg: InterfaceHolder[] or List<InterfaceHolder<T>>
