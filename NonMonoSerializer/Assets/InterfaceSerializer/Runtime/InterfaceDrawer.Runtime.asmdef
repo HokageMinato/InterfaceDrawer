@@ -1,12 +1,8 @@
 {
-    "name": "NMSerializer.EditorExtension",
-    "rootNamespace": "NMSerializer.EditorExtension",
-    "references": [
-        "NMSerializer.Runtime"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "name": "InterfaceDrawer.Runtime",
+    "rootNamespace": "InterfaceDrawer.Runtime",
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
