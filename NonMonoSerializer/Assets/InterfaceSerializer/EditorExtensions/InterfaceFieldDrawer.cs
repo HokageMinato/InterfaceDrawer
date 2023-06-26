@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using Component = UnityEngine.Component;
 using InterfaceDrawer.Runtime;
 
 namespace InterfaceDrawer.EditorExtension
@@ -16,8 +18,6 @@ namespace InterfaceDrawer.EditorExtension
 
 
         #region PRIVATE_VARS
-        private const string NO_ATTRIB_DEFINED = "No attributes defined";
-        private string fieldName = string.Empty;
         #endregion
 
 
@@ -34,45 +34,84 @@ namespace InterfaceDrawer.EditorExtension
 
 
         #region UNITY_CALLBAKCS
+
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-           // LogTypes();
+            // LogTypes();
             position.height = EditorGUIUtility.singleLineHeight;
-         
+
             EditorGUI.BeginProperty(position, label, property);
-            SerializedProperty InterfaceHolderInstanceField = property.FindPropertyRelative(InterfaceHolder.InstancePropertyName);
-            if (InterfaceHolderInstanceField != null)
+
+            SerializedProperty interfaceHolderInstanceField = FindInterfaceHolderProperty(property);
+            if (interfaceHolderInstanceField == null)
             {
-                //EditorGUI.ObjectField(position, InterfaceHolderInstanceField, new GUIContent(GetFieldName()));
-                EditorGUI.ObjectField(position, InterfaceHolderInstanceField,typeof(IMonoInterface), new GUIContent(GetFieldName()));
-                ValidateFieldValue(InterfaceHolderInstanceField);
+                Debug.LogError($"InterfaceField Cant be found, Make sure fieldName:{InterfaceHolder.InstancePropertyName} is set in script properly");
+                EditorGUI.EndProperty();
+                return;
             }
 
-            EditorGUI.EndProperty();
+            EditorGUI.ObjectField(position, interfaceHolderInstanceField, new GUIContent(GetFieldName()));
+            if (interfaceHolderInstanceField.objectReferenceValue == null)
+            {
 
+                EditorGUI.EndProperty();
+                return;
+            }
+
+
+            if (DoesValueBelongToAllowedType(interfaceHolderInstanceField))
+            {
+                EditorGUI.EndProperty();
+                return;
+            }
+
+            if (IsGameObjectSuppliedAsValue(interfaceHolderInstanceField))
+            {
+                var foundComponent = FindAllowedTypeInstance_FirstOrDefault(interfaceHolderInstanceField);
+                interfaceHolderInstanceField.objectReferenceValue = foundComponent;
+            }
+            else
+            {
+                interfaceHolderInstanceField.objectReferenceValue = null;
+                EditorGUI.EndProperty();
+                return;
+            }
         }
 
-        private void ValidateFieldValue(SerializedProperty field)
+        private Component FindAllowedTypeInstance_FirstOrDefault(SerializedProperty interfaceField)
         {
-            if (field.objectReferenceValue == null)
-                return;
-
-            Type objectRefType = field.objectReferenceValue.GetType();
             Type[] allowedTypes = GetAllowedTypes();
-            if (!DoesTypeBelongToAnyTargetType(objectRefType, allowedTypes)) 
-                field.objectReferenceValue = null;
+            GameObject go = interfaceField.objectReferenceValue as GameObject;
+            foreach (var item in allowedTypes)
+            {
+                var allowedTypeInstance = go.GetComponent(item);
+                if (allowedTypeInstance != null)
+                {
+                    return allowedTypeInstance;
+                }
+            }
+            return null;
+        }
+
+        private bool DoesValueBelongToAllowedType(SerializedProperty interfaceField)
+        {
+            Type objectRefType = interfaceField.objectReferenceValue.GetType();
+            Type[] allowedTypes = GetAllowedTypes();
+            return DoesTypeBelongToAnyTargetType(objectRefType, allowedTypes);
+        }
+
+        private bool IsGameObjectSuppliedAsValue(SerializedProperty interfaceField)
+        {
+            GameObject go = interfaceField.objectReferenceValue as GameObject;
+            return (go != null);
         }
 
         private string GetFieldName()
         {
-            if (fieldName != string.Empty)
-                return fieldName;
-
             char[] nm = fieldInfo.Name.ToCharArray();
             nm[0] = char.ToUpper(nm[0]);
-            fieldName = new string(nm);
-
-            return fieldName;
+            return new string(nm);
         }
         #endregion
 
@@ -82,22 +121,7 @@ namespace InterfaceDrawer.EditorExtension
 
 
         #region PRIVATE_METHODS
-        private static float GetInterPropertyDifference()
-        {
-            return (EditorGUIUtility.singleLineHeight + 2f) * 1.08f;
-        }
-
-        private bool logged = false;
-        private Type[] GetAllowedTypes()
-        {
-            InterfaceFieldAttribute typeAttributes = this.fieldInfo.GetCustomAttributes(typeof(InterfaceFieldAttribute), true).FirstOrDefault() as InterfaceFieldAttribute;
-            if (typeAttributes == null)
-                return new Type[] { typeof(IMonoInterface) };
-
-            return typeAttributes.AllowedInterfaceTypes;
-        }
-
-        private bool DoesTypeBelongToAnyTargetType(Type targetType,Type[] interfaceTypes)
+        private bool DoesTypeBelongToAnyTargetType(Type targetType, Type[] interfaceTypes)
         {
             foreach (Type interfaceType in interfaceTypes)
             {
@@ -109,25 +133,23 @@ namespace InterfaceDrawer.EditorExtension
 
             return false;
         }
-
-
-        private void LogTypes()
-        {
-            if (logged)
-                return;
-            var collection = GetAllowedTypes();
-            string items = string.Empty;
-            foreach (var item in collection)
-            {
-                items += $"{item.Name} \n";
-            }
-            Debug.Log(items);
-            logged = true;
-        }
         #endregion
 
 
         #region PROTECTED_METHODS
+        protected virtual SerializedProperty FindInterfaceHolderProperty(SerializedProperty property)
+        {
+            return property.FindPropertyRelative(InterfaceHolder.InstancePropertyName);
+        }
+
+        protected virtual Type[] GetAllowedTypes()
+        {
+            InterfaceFieldAttribute typeAttributes = this.fieldInfo.GetCustomAttributes(typeof(InterfaceFieldAttribute), true).FirstOrDefault() as InterfaceFieldAttribute;
+            if (typeAttributes == null)
+                return new Type[] { typeof(IMonoInterface) };
+
+            return typeAttributes.AllowedInterfaceTypes;
+        }
         #endregion
 
 

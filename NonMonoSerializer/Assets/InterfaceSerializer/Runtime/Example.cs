@@ -11,7 +11,6 @@ public interface IShape : IMonoInterface
     public void SayName();
 }
 
-
 public interface ICorneredShape : IMonoInterface
 {
     public int TotalCorners { get; }
@@ -20,33 +19,32 @@ public interface ICorneredShape : IMonoInterface
 
 public class Example : MonoBehaviour
 {
-
     #region PUBLIC_VARS
-    [InterfaceField(typeof(IShape))] //Allow single
-    public InterfaceHolder shape1;
+    [InterfaceField(typeof(IShape))] //Single Type Restriction
+    public InterfaceHolder[] shape1;
 
-    [InterfaceField(typeof(IShape),typeof(ICorneredShape))] //Allow Multiple
+    [InterfaceField(typeof(IShape),typeof(ICorneredShape))] //Multiple Types Restriction
     public InterfaceHolder shape2;
 
 
-    public InterfaceHolder<IShape> shape3; //Generic for reducing cast overhead.
-                                           //(Presently supports single field only,
-                                           //Easily extendible by converting to field prop and extending editor.
-                                           //might update later.!
+    public InterfaceHolder<IShape> shape3; //Generic for optimised access.
+                                           //(Presently supports single field only)
     #endregion
 
+
     #region PRIVATE_PROPERTIES
-
-    private IShape _shape1 { get { return shape1.GetValue<IShape>(); } }
-
-    private ICorneredShape __shape2 { get { return shape2.GetValue<ICorneredShape>(); } }
-    //Assign property according to the type you want to inject from inspector.
-    //Will throw castException if you assign ICorneredShape and request IShape.
+    private IShape _shape1 { get { return null; } }
     
     private IShape _shape2 { get { return shape2.GetValue<IShape>(); } }
 
     private IShape _shape3 { get { return shape3.Value; } }
     #endregion
+
+
+    private void PrintShapeName(IShape shape)
+    {
+        shape.SayName();
+    }
 
 
     #region PUBLIC_METHODS
@@ -58,15 +56,15 @@ public class Example : MonoBehaviour
         PrintShapeCorners(__shape2);
     }
 
-    private void PrintShapeName(IShape shape) 
-    {
-        shape.SayName();
-    }
 
     private void PrintShapeCorners(ICorneredShape corneredShape) 
     {
         Debug.Log($"Total Corners {corneredShape.TotalCorners}");
     }
+    //NOTE:
+    //Assign property according to the type you want to inject from inspector.
+    //Will throw castException if you assign ICorneredShape and request IShape.
+    private ICorneredShape __shape2 { get { return shape2.GetValue<ICorneredShape>(); } }
     #endregion
 }
 
